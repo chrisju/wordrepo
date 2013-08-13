@@ -10,12 +10,13 @@
 #include <time.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 const int EN_LENGHT = 10;
 int is_chinese(char* p);
 int is_english(char* p);
-void  write_chinese(char **p, FILE *fp_out);
-void tidy(const char *fin_path, const char *fout_path);
+void  write_chinese(char **p, char **p2);
+char *create_tidy_str(const char *fin_path, char **pbuf, int* plen);
 
 int main(int argc, char ** argv)
 {
@@ -27,18 +28,33 @@ int main(int argc, char ** argv)
 
     unsigned long start = clock();
 
-    tidy(fin_path, fout_path);
+    char *buf;
+    int len;
+    create_tidy_str(fin_path,&buf,&len);
+    //printf("len:%s\n",fin_path);
+    //printf("len:%s\n",fout_path);
+    //printf("len:%d\n",len);
+
+    FILE *fp_out;
+    fp_out = fopen(fout_path,"w");
+    if(fp_out == NULL)
+    {
+        return;
+    }
+
+    fwrite(buf,1,len,fp_out);
+    fclose(fp_out);
+    free(buf);
 
     printf("%.3lf\n", ((double)(clock() - start))/CLOCKS_PER_SEC);
 }
 
-void tidy(const char *fin_path, const char *fout_path)
+char *create_tidy_str(const char *fin_path, char **pbuf, int* plen)
 {
     FILE *fp_in, *fp_out;
     fp_in = fopen(fin_path,"r");
-    fp_out = fopen(fout_path,"w");
 
-    if(fp_in == NULL || fp_out == NULL)
+    if(fp_in == NULL)
     {
         return;
     }
@@ -47,20 +63,23 @@ void tidy(const char *fin_path, const char *fout_path)
     int size = ftell(fp_in);
     fseek(fp_in, 0L, SEEK_SET);
 
-    char *buf;
+    char *buf,*buf2;
     buf = (char*)malloc(size+1);
+    buf2 = (char*)malloc(size+1);
+    *plen = size+1;
 
     int len = fread(buf,1,size,fp_in);
     buf[len] = '\0';
 
     char *p = buf;
+    char *p2 = buf2;
     char *start = buf;
     // 汉字或汉字之后EN_LENGHT个英文之内保留
     do
     {
         if(is_chinese(p))
         {
-            write_chinese(&p, fp_out);
+            write_chinese(&p, &p2);
             start = p;
         }
         else
@@ -72,11 +91,16 @@ void tidy(const char *fin_path, const char *fout_path)
             }
             else if(p - start <= EN_LENGHT)
             {
-                fputc(*p, fp_out);
+                *p2++ = *p;
             }
             p++;
         }
     }while(*p != '\0');
+
+    free(buf);
+    *pbuf = buf2;
+    fclose(fp_in);
+    return *pbuf;
 }
 
 int is_english(char* p)
@@ -119,24 +143,26 @@ int is_chinese_gbk(char* p)
  *
  * 各种编码写入长度不一样
  */
-void  write_chinese_utf8(char **p, FILE *fp_out)
+void  write_chinese_utf8(char **p, char **p2)
 {
     while(**p & 0x80)
     {
-        fwrite(*p,1,1,fp_out);
-        *p += 1;
+        **p2 = **p;
+        (*p)++;
+        (*p2)++;
     }
 }
-void  write_chinese_gbk(char **p, FILE *fp_out)
+void  write_chinese_gbk(char **p, char **p2)
 {
-    fwrite(*p,1,2,fp_out);
+    memcpy(*p2,*p,2);
     *p += 2;
+    *p2 += 2;
 }
 
-void  write_chinese(char **p, FILE *fp_out)
+void  write_chinese(char **p, char **p2)
 {
-    //write_chinese_gbk(p, fp_out);
-    write_chinese_utf8(p, fp_out);
+    //write_chinese_gbk(p, p2);
+    write_chinese_utf8(p, p2);
 }
 int is_chinese(char* p)
 {
