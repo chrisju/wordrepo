@@ -17,42 +17,51 @@ int is_chinese(char* p);
 int is_english(char* p);
 void  write_chinese(char **p, char **p2);
 char *create_tidy_str(const char *fin_path, char **pbuf, int* plen);
+void scan_dir(const char *directory, int deepth, FILE **fp_out);
+char *get_real_path(const char *path, char *out, int size);
 
 int main(int argc, char ** argv)
 {
     if(argc != 3)
         return;
 
-    char *fin_path = argv[1];
-    char *fout_path = argv[2];
+    char fout_path[256];
+    get_real_path(argv[2],fout_path,256);
+    printf("%s\n",fout_path);
 
     unsigned long start = clock();
 
-    char *buf;
-    int len;
-    create_tidy_str(fin_path,&buf,&len);
-    //printf("len:%s\n",fin_path);
-    //printf("len:%s\n",fout_path);
-    //printf("len:%d\n",len);
-
     FILE *fp_out;
-    fp_out = fopen(fout_path,"w");
+    fp_out = fopen(fout_path,"wb");
     if(fp_out == NULL)
     {
-        return;
+        return 1;
     }
 
-    fwrite(buf,1,len,fp_out);
+    int deepth = 0;
+    scan_dir(argv[1], deepth, &fp_out);
+
     fclose(fp_out);
-    free(buf);
 
     printf("%.3lf\n", ((double)(clock() - start))/CLOCKS_PER_SEC);
+    return 0;
+}
+
+char *get_real_path(const char *path, char *out, int size)
+{
+    if(*path == '/')
+        return strncpy(out,path,size);
+
+    char cwd[256];
+    getcwd(cwd,256);
+    snprintf(out,size,"%s/%s",cwd,path);
+    return out;
 }
 
 char *create_tidy_str(const char *fin_path, char **pbuf, int* plen)
 {
     FILE *fp_in, *fp_out;
-    fp_in = fopen(fin_path,"r");
+    fp_in = fopen(fin_path,"rb");
 
     if(fp_in == NULL)
     {
@@ -66,10 +75,10 @@ char *create_tidy_str(const char *fin_path, char **pbuf, int* plen)
     char *buf,*buf2;
     buf = (char*)malloc(size+1);
     buf2 = (char*)malloc(size+1);
-    *plen = size+1;
 
     int len = fread(buf,1,size,fp_in);
     buf[len] = '\0';
+    bzero(buf2,size+1);
 
     char *p = buf;
     char *p2 = buf2;
@@ -98,8 +107,10 @@ char *create_tidy_str(const char *fin_path, char **pbuf, int* plen)
     }while(*p != '\0');
 
     free(buf);
-    *pbuf = buf2;
     fclose(fp_in);
+
+    *pbuf = buf2;
+    *plen = strlen(buf2);
     return *pbuf;
 }
 
