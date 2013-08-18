@@ -12,13 +12,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "common.h"
+
 const int EN_LENGHT = 10;
-int is_chinese(char* p);
-int is_english(char* p);
-void  write_chinese(char **p, char **p2);
 char *create_tidy_str(const char *fin_path, char **pbuf, int* plen);
 void scan_dir(const char *directory, int deepth, FILE **fp_out);
-char *get_real_path(const char *path, char *out, int size);
 
 int main(int argc, char ** argv)
 {
@@ -45,17 +43,6 @@ int main(int argc, char ** argv)
 
     printf("%.3lf\n", ((double)(clock() - start))/CLOCKS_PER_SEC);
     return 0;
-}
-
-char *get_real_path(const char *path, char *out, int size)
-{
-    if(*path == '/')
-        return strncpy(out,path,size);
-
-    char cwd[256];
-    getcwd(cwd,256);
-    snprintf(out,size,"%s/%s",cwd,path);
-    return out;
 }
 
 char *create_tidy_str(const char *fin_path, char **pbuf, int* plen)
@@ -114,69 +101,3 @@ char *create_tidy_str(const char *fin_path, char **pbuf, int* plen)
     return *pbuf;
 }
 
-int is_english(char* p)
-{
-    char c = *p;
-    return (c > 64 && c < 91) || ( c > 96 && c < 123);
-}
-
-/**
- * 判断是否汉字
- *
- * 各种编码判断方式不一样
- */
-int is_chinese_utf8(char* p)
-{
-    // 只是判断了是否是utf8编码
-    return *p & 0x80;
-}
-int is_chinese_gbk(char* p)
-{
-    char c = *p;
-    short high, low;
-    unsigned int code;
-
-    if(*p < 0)
-    {
-        high = (short)(*p + 256);
-        low = (short)(*(p+1)+256);
-        code = high*256 + low;
-        return code>=0xB0A1 && code<=0xF7FE || code>=0x8140 && code<=0xA0FE || code>=0xAA40 && code<=0xFEA0;
-    }
-    else
-    {
-        return 0;
-    }
-}
-
-/**
- * 写入汉字
- *
- * 各种编码写入长度不一样
- */
-void  write_chinese_utf8(char **p, char **p2)
-{
-    while(**p & 0x80)
-    {
-        **p2 = **p;
-        (*p)++;
-        (*p2)++;
-    }
-}
-void  write_chinese_gbk(char **p, char **p2)
-{
-    memcpy(*p2,*p,2);
-    *p += 2;
-    *p2 += 2;
-}
-
-void  write_chinese(char **p, char **p2)
-{
-    //write_chinese_gbk(p, p2);
-    write_chinese_utf8(p, p2);
-}
-int is_chinese(char* p)
-{
-    //return is_chinese_gbk(p);
-    return is_chinese_utf8(p);
-}
