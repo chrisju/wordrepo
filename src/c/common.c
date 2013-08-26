@@ -157,12 +157,16 @@ char *find_a_hanzi_utf8(char *p, WORDORIGIN *hanzi)
         p++;
     }
 
-    hanzi->str = p;
-    hanzi->size = get_utf8_size(p);
-    if(hanzi->size < 1 || hanzi->size > 4)
+    if(hanzi != NULL)
     {
-        return NULL;
+        hanzi->str = p;
+        hanzi->size = get_utf8_size(p);
+        if(hanzi->size < 1 || hanzi->size > 4)
+        {
+            return NULL;
+        }
     }
+
     return p;
 }
 int is_chinese_gbk(char* p);
@@ -174,8 +178,13 @@ char *find_a_hanzi_gbk(char *p, WORDORIGIN *hanzi)
         p++;
     }
 
-    hanzi->str = p;
-    hanzi->size = 2;
+    if(hanzi != NULL)
+    {
+        hanzi->str = p;
+        hanzi->size = 2;
+    }
+
+    return p;
 }
 
 //前进到汉字处 返回值为汉字起始位置

@@ -12,20 +12,17 @@
 #include "common.h"
 
 
-void analyse(const char *mbuf, int len);
 //查询hanzi是否在全局字列表里
 gboolean is_hanzi_in_list(WORDORIGIN hanzi);
 void add_hanzi_to_list(WORDORIGIN hanzi);
 //查找出所有以hanzi开头的词
-void find_all_word(char *p, WORDORIGIN hanzi);
+void find_all_word(char *p);
 void freehzlist();
 void freewordlist();
 void sort_list();
 
 static GList *hanzi_list = NULL;
 static GList *word_list = NULL;
-
-static char *buf_end = NULL;
 
 int main(int argc, char ** argv)
 {
@@ -35,15 +32,17 @@ int main(int argc, char ** argv)
     int fd = open(argv[1],O_RDONLY);
     int len = lseek(fd,0,SEEK_END);
     char *mbuf = (char *) mmap(NULL,len,PROT_READ,MAP_PRIVATE,fd,0);
-    buf_end = mbuf + len;
 
-    analyse(mbuf,len);
+    find_all_word(mbuf);
 
-    ////只出现1次的不算词 不保留
+    //去除无效词比如包含标点的
     //clean_list();
 
     ////存在包含关系且频率(一样)的词只保留最长的
+    ////只保留MAX_LEN-1长度的词,其余可能需要重新计算
     //tidy_list();
+
+    ////总共只出现1次的不算词 不保留
 
     //按词频排序
     sort_list();
@@ -99,16 +98,20 @@ void add_word_to_list(AWORD word)
 }
 //查找出所有以hanzi开头的词
 //start需是hanzi开头之处
-void find_all_word(char *start, WORDORIGIN hanzi)
+void find_all_word(char *start)
 {
     char *p;
     int i;
     int size;
 
     p = start;
-    while(*p != '\0' && buf_end - p > 1)
+    while(*p != '\0')
     {
         //printf("p:0x%x\n",p);
+        p = find_a_hanzi(p, NULL);
+        if(p == NULL)
+            break;
+
         for(i=MAX_WORD_LEN; i>1; i--)
         {
             size = get_word_n(p, i);
@@ -129,34 +132,7 @@ void find_all_word(char *start, WORDORIGIN hanzi)
         }
 
         p = forward_a_hanzi(p);
-        p = find_the_hanzi(p, hanzi);
     }
-}
-
-void analyse(const char *mbuf, int len)
-{
-    printf("total:%d\n",len);
-    printf("strlen:%d\n",strlen(mbuf));
-    // TODO 使用新方法遍历-建立分支
-    char *p = (char *)mbuf;
-    do
-    {
-        //寻找中文字
-        WORDORIGIN hanzi;
-        p=find_a_hanzi(p,&hanzi);
-        if(p==NULL) break;
-
-        //若其不在已处理列表中,则找出所有以其为起始长度为n个的词
-        if(!is_hanzi_in_list(hanzi))
-        {
-            add_hanzi_to_list(hanzi);
-            find_all_word(p,hanzi);
-        }
-        else
-        {
-            p = forward_a_hanzi(p);
-        }
-    }while(*p != '\0' && p < buf_end);
 }
 
 void freehzlist()
