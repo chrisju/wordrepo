@@ -20,6 +20,7 @@ void add_hanzi_to_list(WORDORIGIN hanzi);
 void find_all_word(char *p, WORDORIGIN hanzi);
 void freehzlist();
 void freewordlist();
+void sort_list();
 
 static GList *hanzi_list = NULL;
 static GList *word_list = NULL;
@@ -38,35 +39,19 @@ int main(int argc, char ** argv)
 
     analyse(mbuf,len);
 
+    ////只出现1次的不算词 不保留
+    //clean_list();
+
+    ////存在包含关系且频率(一样)的词只保留最长的
+    //tidy_list();
+
+    //按词频排序
+    sort_list();
+
     freehzlist();
     freewordlist();
     munmap(mbuf, len);
     return 0;
-}
-
-void analyse(const char *mbuf, int len)
-{
-    printf("total:%d\n",len);
-    printf("strlen:%d\n",strlen(mbuf));
-    char *p = (char *)mbuf;
-    do
-    {
-        //寻找中文字
-        WORDORIGIN hanzi;
-        p=find_a_hanzi(p,&hanzi);
-        if(p==NULL) break;
-
-        //若其不在已处理列表中,则找出所有以其为起始长度为n个的词
-        if(!is_hanzi_in_list(hanzi))
-        {
-            add_hanzi_to_list(hanzi);
-            find_all_word(p,hanzi);
-        }
-        else
-        {
-            p = forward_a_hanzi(p);
-        }
-    }while(*p != '\0' && p < buf_end);
 }
 
 //查询hanzi是否在全局字列表里
@@ -148,6 +133,32 @@ void find_all_word(char *start, WORDORIGIN hanzi)
     }
 }
 
+void analyse(const char *mbuf, int len)
+{
+    printf("total:%d\n",len);
+    printf("strlen:%d\n",strlen(mbuf));
+    // TODO 使用新方法遍历-建立分支
+    char *p = (char *)mbuf;
+    do
+    {
+        //寻找中文字
+        WORDORIGIN hanzi;
+        p=find_a_hanzi(p,&hanzi);
+        if(p==NULL) break;
+
+        //若其不在已处理列表中,则找出所有以其为起始长度为n个的词
+        if(!is_hanzi_in_list(hanzi))
+        {
+            add_hanzi_to_list(hanzi);
+            find_all_word(p,hanzi);
+        }
+        else
+        {
+            p = forward_a_hanzi(p);
+        }
+    }while(*p != '\0' && p < buf_end);
+}
+
 void freehzlist()
 {
     printf("hzlist:%d\n",g_list_length(hanzi_list));
@@ -171,4 +182,16 @@ void freewordlist()
         printf("%d\t%s\n", word->freq, sword);
         free(node->data);
     }
+}
+
+gint compare_word(gconstpointer a, gconstpointer b)
+{
+    AWORD *w1 = (AWORD *)a;
+    AWORD *w2 = (AWORD *)b;
+    return w1->freq - w2->freq;
+}
+
+void sort_list()
+{
+    word_list = g_list_sort(word_list, compare_word);
 }
