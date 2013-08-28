@@ -41,6 +41,7 @@ int is_english(char* p)
 
 /**
  * 判断是否汉字
+ * TODO 汉字在unicode 4E00-9FA5
  *
  * 各种编码判断方式不一样
  */

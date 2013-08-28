@@ -3,12 +3,13 @@
 
 #include <glib.h>
 
-#define MAX_WORD_LEN 2
+#define MAX_WORD_LEN 3
+#define EN_LENGHT 10
 
 //优化:内存池
 typedef struct
 {
-    char *str; //不可修改内容,无需释放
+    char *str; //不可修改内容,无需释放 TODO 改为记录偏移,以便查找再开
     int size;
     int freq;
 } AWORD;

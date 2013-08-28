@@ -20,9 +20,11 @@ void find_all_word(char *p);
 void freehzlist();
 void freewordlist();
 void sort_list();
+void clean_list();
 
 static GList *hanzi_list = NULL;
 static GList *word_list = NULL;
+static GList *orphan_list = NULL;
 
 int main(int argc, char ** argv)
 {
@@ -35,14 +37,11 @@ int main(int argc, char ** argv)
 
     find_all_word(mbuf);
 
-    //去除无效词比如包含标点的
-    //clean_list();
-
-    ////存在包含关系且频率(一样)的词只保留最长的
-    ////只保留MAX_LEN-1长度的词,其余可能需要重新计算
+    //// TODO 存在包含关系且频率(一样)的词只保留最长的
     //tidy_list();
 
     ////总共只出现1次的不算词 不保留
+    clean_list();
 
     //按词频排序
     sort_list();
@@ -57,7 +56,7 @@ int main(int argc, char ** argv)
 gboolean is_hanzi_in_list(WORDORIGIN hanzi)
 {
     GList *node;
-    for(node=hanzi_list;node;node=g_list_next(node))
+    for(node=g_list_first(hanzi_list);node;node=g_list_next(node))
     {
         WORDORIGIN *data = node->data;
         if(hzcmp(*data, hanzi)==0)
@@ -79,7 +78,7 @@ void add_hanzi_to_list(WORDORIGIN hanzi)
 AWORD *get_word_in_list(WORDORIGIN word)
 {
     GList *node;
-    for(node=word_list;node;node=g_list_next(node))
+    for(node=g_list_first(word_list);node;node=g_list_next(node))
     {
         AWORD *data = node->data;
         if(is_same_word(*data, word))
@@ -139,18 +138,19 @@ void freehzlist()
 {
     printf("hzlist:%d\n",g_list_length(hanzi_list));
     GList *node;
-    for(node=hanzi_list;node;node=g_list_next(node))
+    for(node=g_list_first(hanzi_list);node;node=g_list_next(node))
     {
         free(node->data);
     }
 }
 void freewordlist()
 {
+    //TODO write to file
     printf("wordlist:%d\n",g_list_length(hanzi_list));
     char sword[256];
     AWORD *word;
     GList *node;
-    for(node=word_list;node;node=g_list_next(node))
+    for(node=g_list_first(word_list);node;node=g_list_next(node))
     {
         word = node->data;
         bzero(sword, 256);
@@ -171,3 +171,26 @@ void sort_list()
 {
     word_list = g_list_sort(word_list, compare_word);
 }
+
+void clean_list()
+{
+    AWORD *word;
+    GList *node;
+    for(node=g_list_first(word_list);node;node=g_list_next(node))
+    {
+        word = node->data;
+        if(word->freq == 1)
+        {
+            word_list = g_list_delete_link(word_list, node);
+            free(word);
+        }
+        else if(g_utf8_strlen(word->str, word->size) == MAX_WORD_LEN)
+        {
+            word_list = g_list_delete_link(word_list, node);
+            orphan_list = g_list_append(orphan_list, word);
+            //TODO research orphan
+            //TODO write to file
+        }
+    }
+}
+

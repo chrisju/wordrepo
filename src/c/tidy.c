@@ -14,7 +14,6 @@
 
 #include "common.h"
 
-const int EN_LENGHT = 10;
 char *create_tidy_str(const char *fin_path, char **pbuf, int* plen);
 void scan_dir(const char *directory, int deepth, FILE **fp_out);
 
@@ -84,6 +83,7 @@ char *create_tidy_str(const char *fin_path, char **pbuf, int* plen)
             if(!is_english(p))
             {
                 start = buf;
+                // TODO 添加一个'.'标记断层
             }
             else if(p - start <= EN_LENGHT)
             {
