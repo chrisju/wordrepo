@@ -19,13 +19,18 @@ void add_hanzi_to_list(WORDORIGIN hanzi);
 //查找出所有以hanzi开头的词
 void find_all_word(char *p, size_t len);
 void freehzlist();
-void freewordlist();
+void freewordtree();
+void freeresultlist();
 void freeorphanlist();
-void sort_list();
-void clean_list();
+gint compare_word(gconstpointer a, gconstpointer b);
+static gint
+word_compare(gconstpointer p1, gconstpointer p2, gpointer data);
+static gint
+clean_traverse(gpointer key, gpointer value, gpointer data);
 
 static GSList *hanzi_list = NULL;
-static GSList *word_list = NULL;
+static GTree *word_tree = NULL;
+static GSList *result_list = NULL;
 static GSList *orphan_list = NULL;
 
 int main(int argc, char ** argv)
@@ -54,6 +59,7 @@ int main(int argc, char ** argv)
     printf("seek:%lldus\nmmap:%lldus\n",L2-L1, L3-L2);
 
     printf("start find word:\n");
+    word_tree = g_tree_new_full(word_compare,NULL,free,free);
     find_all_word(mbuf, len);
 
     gettimeofday(&tv,NULL);
@@ -64,25 +70,28 @@ int main(int argc, char ** argv)
     //// TODO 存在包含关系且频率(一样)的词只保留最长的
     //tidy_list();
 
-    ////总共只出现1次的不算词 不保留
-    clean_list();
+    //总共只出现1次的不算词 不保留
+    //不保留长度最长的词,进行进一步处理
+    printf("wordtree:%d\n",g_tree_nnodes(word_tree));
+    g_tree_traverse(word_tree, clean_traverse, G_IN_ORDER, NULL);
 
     gettimeofday(&tv,NULL);
     L2 = tv.tv_sec*1000*1000 + tv.tv_usec;
 
-    //按词频排序
-    sort_list();
+    //排序
+    result_list = g_slist_sort(result_list, compare_word);
 
     gettimeofday(&tv,NULL);
     L3 = tv.tv_sec*1000*1000 + tv.tv_usec;
 
     freehzlist();
-    freewordlist();
+    freewordtree();
+    freeresultlist();
     freeorphanlist();
 
     gettimeofday(&tv,NULL);
     L4 = tv.tv_sec*1000*1000 + tv.tv_usec;
-    printf("clean:%lldus\nsort:%lldus\nfree:%lldus\n",L2-L1, L4-L3);
+    printf("clean:%lldus\nsort:%lldus\nfree:%lldus\n",L2-L1, L3-L2, L4-L3);
     munmap(mbuf, len);
     return 0;
 }
@@ -110,25 +119,14 @@ void add_hanzi_to_list(WORDORIGIN hanzi)
     hanzi_list = g_slist_append(hanzi_list,data);
 }
 
-AWORD *get_word_in_list(WORDORIGIN word)
-{
-    GSList *node;
-    for(node=word_list;node;node=node->next)
-    {
-        AWORD *data = node->data;
-        if(is_same_word(*data, word))
-        {
-            return data;
-        }
-    }
-    return NULL;
-}
-void add_word_to_list(AWORD word)
+void add_word_to_list(WORDORIGIN word)
 {
     //printaword(word);
-    AWORD *data = g_new0(AWORD, 1);
-    memcpy(data, &word, sizeof(AWORD));
-    word_list = g_slist_append(word_list,data);
+    WORDORIGIN *k = g_new(WORDORIGIN, 1);
+    int *v = g_new(int, 1);
+    memcpy(k, &word, sizeof(WORDORIGIN));
+    *v = 1;
+    g_tree_insert(word_tree,k,v);
 }
 //查找出所有以hanzi开头的词
 //start需是hanzi开头之处
@@ -143,6 +141,7 @@ void find_all_word(char *start, size_t len)
     char *p;
     int i;
     int size;
+    int *pfreq;
 
     size_t tip_pos = 0;
     size_t step = len/100;
@@ -179,17 +178,16 @@ void find_all_word(char *start, size_t len)
 
 //    gettimeofday(&tv,NULL);
 //    M2 = tv.tv_sec*1000*1000 + tv.tv_usec;
-            if((pword = get_word_in_list(word)) != NULL)
+            if((pfreq = g_tree_lookup(word_tree, &word)) != NULL)
             {
 //    gettimeofday(&tv,NULL);
 //    M3 = tv.tv_sec*1000*1000 + tv.tv_usec;
-                pword->freq += 1;
+                *pfreq += 1;
             }
             else
             {
 //    gettimeofday(&tv,NULL);
 //    M3 = tv.tv_sec*1000*1000 + tv.tv_usec;
-                AWORD word = {p,size,1};
                 add_word_to_list(word);
             }
 //    gettimeofday(&tv,NULL);
@@ -216,20 +214,24 @@ void freehzlist()
         free(node->data);
     }
 }
-void freewordlist()
+void freewordtree()
 {
-    printf("wordlist:%d\n",g_slist_length(word_list));
-    int fd = open("/tmp/wordlist",O_WRONLY|O_CREAT|O_TRUNC,0600);
+    g_tree_destroy(word_tree);
+}
+void freeresultlist()
+{
+    printf("resultlist:%d\n",g_slist_length(result_list));
+    int fd = open("/tmp/resultlist",O_WRONLY|O_CREAT|O_TRUNC,0600);
     char buf[512];
     char sword[256];
     AWORD *word;
     GSList *node;
-    for(node=word_list;node;node=node->next)
+    for(node=result_list;node;node=node->next)
     {
         word = node->data;
         bzero(sword, 256);
         memcpy(sword, word->str, word->size);
-        snprintf(buf, 512, "%d\t%s\t%d\n", word->freq, sword, g_utf8_strlen(word->str,word->size));
+        snprintf(buf, 512, "%d\t%s\n", word->freq, sword);
         write(fd, buf, strlen(buf));
         free(node->data);
     }
@@ -262,31 +264,41 @@ gint compare_word(gconstpointer a, gconstpointer b)
     return w1->freq - w2->freq;
 }
 
-void sort_list()
+static gint
+word_compare(gconstpointer p1, gconstpointer p2, gpointer data)
 {
-    word_list = g_slist_sort(word_list, compare_word);
-}
+    const WORDORIGIN *a = p1;
+    const WORDORIGIN *b = p2;
 
-void clean_list()
+    if(a->size != b->size)
+        return a->size - b->size;
+    else
+        return strncmp(a->str,b->str,a->size);
+}
+static gint
+clean_traverse(gpointer key, gpointer value, gpointer data)
 {
-    AWORD *word;
-    GSList *node, *next;
-    for(node=word_list;node;)
+    WORDORIGIN *word = key;
+    int *pfreq = value;
+
+    if(*pfreq > 1)
     {
-        next=node->next;
-        word = node->data;
-        if(word->freq == 1)
+        AWORD *a = g_new(AWORD,1);
+        a->str = word->str;
+        a->size = word->size;
+        a->freq = *pfreq;
+
+        if(g_utf8_strlen(word->str, word->size) == MAX_WORD_LEN)
         {
-            word_list = g_slist_delete_link(word_list, node);
-            free(word);
-        }
-        else if(g_utf8_strlen(word->str, word->size) == MAX_WORD_LEN)
-        {
-            word_list = g_slist_remove(word_list, word);
-            orphan_list = g_slist_append(orphan_list, word);
+            orphan_list = g_slist_append(orphan_list, a);
             //TODO research orphan
         }
-        node = next;
+        else
+        {
+            //printword(*word);
+            //printaword(*a);
+            result_list = g_slist_append(result_list, a);
+        }
     }
+    return FALSE;
 }
-

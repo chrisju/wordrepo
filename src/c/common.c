@@ -260,5 +260,5 @@ void printaword(AWORD word)
     char sword[256];
     bzero(sword, 256);
     memcpy(sword, word.str, word.size);
-    printf("%s\n", sword);
+    printf("%s\t%d\n", sword, word.freq);
 }
