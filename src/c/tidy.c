@@ -20,7 +20,10 @@ void scan_dir(const char *directory, int deepth, FILE **fp_out);
 int main(int argc, char ** argv)
 {
     if(argc != 3)
+    {
+        printf("usage:\n\t./tidy sourcedir targetfile\n");
         return;
+    }
 
     char fout_path[256];
     get_real_path(argv[2],fout_path,256);
@@ -40,7 +43,7 @@ int main(int argc, char ** argv)
 
     fclose(fp_out);
 
-    printf("%.3lf\n", ((double)(clock() - start))/CLOCKS_PER_SEC);
+    printf("%.3lfs\n", ((double)(clock() - start))/CLOCKS_PER_SEC);
     return 0;
 }
 

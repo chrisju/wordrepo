@@ -42,6 +42,7 @@ void printfspace(int deepth)
 }
 
 
+int all = 0;
 void scan_dir(const char *directory, int deepth, FILE **fp_out)
 {
     DIR *dp;
@@ -87,6 +88,11 @@ void scan_dir(const char *directory, int deepth, FILE **fp_out)
                 create_tidy_str(path,&buf,&len);
                 fwrite(buf,1,len,*fp_out);
                 free(buf);
+
+                all += len;
+                printf("len: %d\n", all);
+                // TODO for test
+                if(all > 20 * 1024) break;
             }
         }
     }

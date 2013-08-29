@@ -91,7 +91,7 @@ int main(int argc, char ** argv)
 gboolean is_hanzi_in_list(WORDORIGIN hanzi)
 {
     GSList *node;
-    for(node=hanzi_list;node;node=g_slist_next(node))
+    for(node=hanzi_list;node;node=node->next)
     {
         WORDORIGIN *data = node->data;
         if(hzcmp(*data, hanzi)==0)
@@ -113,7 +113,7 @@ void add_hanzi_to_list(WORDORIGIN hanzi)
 AWORD *get_word_in_list(WORDORIGIN word)
 {
     GSList *node;
-    for(node=word_list;node;node=g_slist_next(node))
+    for(node=word_list;node;node=node->next)
     {
         AWORD *data = node->data;
         if(is_same_word(*data, word))
@@ -211,7 +211,7 @@ void freehzlist()
 {
     printf("hzlist:%d\n",g_slist_length(hanzi_list));
     GSList *node;
-    for(node=hanzi_list;node;node=g_slist_next(node))
+    for(node=hanzi_list;node;node=node->next)
     {
         free(node->data);
     }
@@ -224,12 +224,12 @@ void freewordlist()
     char sword[256];
     AWORD *word;
     GSList *node;
-    for(node=word_list;node;node=g_slist_next(node))
+    for(node=word_list;node;node=node->next)
     {
         word = node->data;
         bzero(sword, 256);
         memcpy(sword, word->str, word->size);
-        snprintf(buf, 512, "%d\t%s\n", word->freq, sword);
+        snprintf(buf, 512, "%d\t%s\t%d\n", word->freq, sword, g_utf8_strlen(word->str,word->size));
         write(fd, buf, strlen(buf));
         free(node->data);
     }
@@ -243,7 +243,7 @@ void freeorphanlist()
     char sword[256];
     AWORD *word;
     GSList *node;
-    for(node=orphan_list;node;node=g_slist_next(node))
+    for(node=orphan_list;node;node=node->next)
     {
         word = node->data;
         bzero(sword, 256);
@@ -270,13 +270,14 @@ void sort_list()
 void clean_list()
 {
     AWORD *word;
-    GSList *node;
-    for(node=word_list;node;node=g_slist_next(node))
+    GSList *node, *next;
+    for(node=word_list;node;)
     {
+        next=node->next;
         word = node->data;
         if(word->freq == 1)
         {
-            word_list = g_slist_remove(word_list, word);
+            word_list = g_slist_delete_link(word_list, node);
             free(word);
         }
         else if(g_utf8_strlen(word->str, word->size) == MAX_WORD_LEN)
@@ -285,6 +286,7 @@ void clean_list()
             orphan_list = g_slist_append(orphan_list, word);
             //TODO research orphan
         }
+        node = next;
     }
 }
 
