@@ -4,7 +4,9 @@
 #include <glib.h>
 
 #define MAX_WORD_LEN 5
-#define EN_LENGHT 10
+#define MAXMAX_WORD_LEN 15
+#define EN_LENGHT 0
+#define MIN_FREQ 2
 
 //优化:内存池
 typedef struct
@@ -22,7 +24,7 @@ typedef struct
 int hzcmp(WORDORIGIN hz1, WORDORIGIN hz2);
 gboolean is_same_word(AWORD word1, WORDORIGIN word2);
 //前进到这个汉字结束
-char *forward_a_hanzi(char *p);
+char *forward_a_char(char *p);
 //返回值为汉字起始位置
 char *find_a_hanzi(char *p, WORDORIGIN *hanzi);
 int is_chinese(char* p);
@@ -35,6 +37,7 @@ char *find_the_hanzi(char *p, WORDORIGIN hanzi);
 void printaword(AWORD word);
 void printword(WORDORIGIN word);
 void addsep(char **p);
+WORDORIGIN trim_punc(WORDORIGIN word);
 
 #endif
 

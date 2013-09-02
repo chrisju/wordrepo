@@ -88,7 +88,7 @@ char *create_tidy_str(const char *fin_path, char **pbuf, int* plen)
             if(!is_english(p))
             {
                 start = buf;
-                p = forward_a_hanzi(p);
+                p = forward_a_char(p);
             }
             else if(get_word_n(start, p - start) <= EN_LENGHT)
             {
@@ -100,11 +100,11 @@ char *create_tidy_str(const char *fin_path, char **pbuf, int* plen)
             else if(get_word_n(start, p - start) == EN_LENGHT + 1)
             {
                 addsep(&p2);
-                p = forward_a_hanzi(p);
+                p = forward_a_char(p);
             }
             else
             {
-                p = forward_a_hanzi(p);
+                p = forward_a_char(p);
             }
         }
     }while(*p != '\0');

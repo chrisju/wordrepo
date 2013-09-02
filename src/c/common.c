@@ -41,7 +41,7 @@ int is_english(char* p)
 
 /**
  * 判断是否汉字
- * TODO 汉字在unicode 4E00-9FA5
+ * 汉字在unicode 4E00-9FA5
  *
  * 各种编码判断方式不一样
  */
@@ -101,18 +101,18 @@ void  write_chinese(char **p, char **p2)
     write_chinese_utf8(p, p2);
 }
 
-char *forward_a_hanzi_gbk(char *p)
+char *forward_a_char_gbk(char *p)
 {
     return p + 2;
 }
-char *forward_a_hanzi_utf8(char *p)
+char *forward_a_char_utf8(char *p)
 {
     return p + get_utf8_size(p);
 }
 //前进到这个汉字结束
-char *forward_a_hanzi(char *p)
+char *forward_a_char(char *p)
 {
-    return forward_a_hanzi_utf8(p);
+    return forward_a_char_utf8(p);
 }
 
 //对于UTF-8编码中的任意字节B，如果B的第一位为0，则B为ASCII码，并且B独立的表示一个字符;
@@ -150,12 +150,40 @@ int get_utf8_size(char *p)
     }
 
 }
+//汉字范围: 4E00-9FA5
+gboolean is_hanzi_utf8(char *p)
+{
+    gunichar ch = g_utf8_get_char(p);
+    return (ch >= 0x4E00 && ch <= 0x9FA5);
+}
+// 判断汉字隔断
+gboolean is_punc_utf8(char *p)
+{
+    gunichar ch = g_utf8_get_char(p);
+    if(
+       ch <= 0x40 ||
+       ch >= 0x5B && ch <= 0x60 ||
+       ch >= 0x7B && ch <= 0x7F ||
+       ch >= 0x2000 && ch <= 0x206F ||
+       ch >= 0x2E00 && ch <= 0x2E7F ||
+       ch >= 0x3000 && ch <= 0x303F ||
+       ch >= 0xFF00 && ch <= 0xFFEF
+      )
+    {
+        return TRUE;
+    }
+    else
+    {
+        return FALSE;
+    }
+
+}
 char *find_a_hanzi_utf8(char *p, WORDORIGIN *hanzi)
 {
-    while((*p & 0x80) == 0)
+    while(!is_hanzi_utf8(p))
     {
         if(*p == '\0') return NULL;
-        p++;
+        p = forward_a_char(p);
     }
 
     if(hanzi != NULL)
@@ -271,4 +299,25 @@ void addsep_utf8(char **p)
 void addsep(char **p)
 {
     addsep_utf8(p);
+}
+
+WORDORIGIN trim_punc_utf8(WORDORIGIN word)
+{
+    int len = g_utf8_strlen(word.str, word.size);
+    int i;
+    int size = 0;
+    for(i = 0; i < len; i++)
+    {
+        size = get_word_n(word.str, i);
+        if(is_punc_utf8(word.str + size))
+        {
+            break;
+        }
+    }
+    word.size = get_word_n(word.str, i);
+    return word;
+}
+WORDORIGIN trim_punc(WORDORIGIN word)
+{
+    return trim_punc_utf8(word);
 }

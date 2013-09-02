@@ -58,6 +58,7 @@ int main(int argc, char ** argv)
 
     printf("seek:%lldus\nmmap:%lldus\n",L2-L1, L3-L2);
 
+    // 查找所有词
     printf("start find word:\n");
     word_tree = g_tree_new_full(word_compare,NULL,free,free);
     find_all_word(mbuf, len);
@@ -67,7 +68,8 @@ int main(int argc, char ** argv)
 
     printf("find_all_word:%lldus\n",L1-L3);
 
-    //总共只出现1次的不算词 不保留
+    // 清理树1 去除频率不足的词并生成待重搜的词链表
+    // 清理树2 过滤掉被包含的子词,生成结果链表
     //不保留长度最长的词,进行进一步处理
     printf("wordtree:%d\n",g_tree_nnodes(word_tree));
     g_tree_foreach(word_tree, clean_traverse, NULL);
@@ -75,12 +77,15 @@ int main(int argc, char ** argv)
     gettimeofday(&tv,NULL);
     L2 = tv.tv_sec*1000*1000 + tv.tv_usec;
 
-    //排序
+    //排序结果
     result_list = g_slist_sort(result_list, compare_word);
 
     gettimeofday(&tv,NULL);
     L3 = tv.tv_sec*1000*1000 + tv.tv_usec;
 
+    // 写入文件 TODO 比较一次循环和2次循环的速度
+
+    // 释放树和链表
     freehzlist();
     freewordtree();
     freeresultlist();
@@ -171,6 +176,10 @@ void find_all_word(char *start, size_t len)
             WORDORIGIN word = {p, size};
             AWORD * pword;
 
+            // 遇标点结束
+            word = trim_punc(word);
+            if(g_utf8_strlen(word.str, word.size) < 2) continue;
+
 //    gettimeofday(&tv,NULL);
 //    M2 = tv.tv_sec*1000*1000 + tv.tv_usec;
             if((pfreq = g_tree_lookup(word_tree, &word)) != NULL)
@@ -191,7 +200,7 @@ void find_all_word(char *start, size_t len)
 //    gettimeofday(&tv,NULL);
 //    L4 = tv.tv_sec*1000*1000 + tv.tv_usec;
 
-        p = forward_a_hanzi(p);
+        p = forward_a_char(p);
 //    gettimeofday(&tv,NULL);
 //    L5 = tv.tv_sec*1000*1000 + tv.tv_usec;
 //    printf(":%lldus:%lldus:%lldus:%lldus\n",L2-L1, L3-L2,L4-L3, L5-L4);
@@ -288,8 +297,6 @@ tidy_traverse(gpointer key, gpointer value, gpointer data)
         strncpy(str_son, a->str, a->size);
         if(strstr(str, str_son) != NULL)
         {
-            printword(*word);
-            printaword(*a);
             *b = TRUE;
             return TRUE;
         }
