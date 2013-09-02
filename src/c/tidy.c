@@ -72,6 +72,7 @@ char *create_tidy_str(const char *fin_path, char **pbuf, int* plen)
     char *p = buf;
     char *p2 = buf2;
     char *start = buf;
+    int n;
     // 汉字或汉字之后EN_LENGHT个英文之内保留
     do
     {
@@ -82,17 +83,29 @@ char *create_tidy_str(const char *fin_path, char **pbuf, int* plen)
         }
         else
         {
+            //printf("end:0x%x,p:0x%x\n",buf+len,p);
             // 非英文不保留,英文则保留有限位数
             if(!is_english(p))
             {
                 start = buf;
-                // TODO 添加一个'.'标记断层
+                p = forward_a_hanzi(p);
             }
-            else if(p - start <= EN_LENGHT)
+            else if(get_word_n(start, p - start) <= EN_LENGHT)
             {
-                *p2++ = *p;
+                n = get_word_n(p, 1);
+                memcpy(p2, p, n);
+                p += n;
+                p2 += n;
             }
-            p++;
+            else if(get_word_n(start, p - start) == EN_LENGHT + 1)
+            {
+                addsep(&p2);
+                p = forward_a_hanzi(p);
+            }
+            else
+            {
+                p = forward_a_hanzi(p);
+            }
         }
     }while(*p != '\0');
 

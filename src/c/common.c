@@ -262,3 +262,13 @@ void printaword(AWORD word)
     memcpy(sword, word.str, word.size);
     printf("%s\t%d\n", sword, word.freq);
 }
+
+void addsep_utf8(char **p)
+{
+    **p = '.';
+    (*p)++;
+}
+void addsep(char **p)
+{
+    addsep_utf8(p);
+}

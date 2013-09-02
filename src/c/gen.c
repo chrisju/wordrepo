@@ -67,13 +67,10 @@ int main(int argc, char ** argv)
 
     printf("find_all_word:%lldus\n",L1-L3);
 
-    //// TODO 存在包含关系且频率(一样)的词只保留最长的
-    //tidy_list();
-
     //总共只出现1次的不算词 不保留
     //不保留长度最长的词,进行进一步处理
     printf("wordtree:%d\n",g_tree_nnodes(word_tree));
-    g_tree_traverse(word_tree, clean_traverse, G_IN_ORDER, NULL);
+    g_tree_foreach(word_tree, clean_traverse, NULL);
 
     gettimeofday(&tv,NULL);
     L2 = tv.tv_sec*1000*1000 + tv.tv_usec;
@@ -130,8 +127,6 @@ void add_word_to_list(WORDORIGIN word)
 }
 //查找出所有以hanzi开头的词
 //start需是hanzi开头之处
-//TODO 使用单向链表来优化查询
-//TODO 使用树来优化查询
 void find_all_word(char *start, size_t len)
 {
     long long L1,L2,L3,L4,L5;
@@ -276,6 +271,39 @@ word_compare(gconstpointer p1, gconstpointer p2, gpointer data)
         return strncmp(a->str,b->str,a->size);
 }
 static gint
+tidy_traverse(gpointer key, gpointer value, gpointer data)
+{
+    WORDORIGIN *word = key;
+    int *pfreq = value;
+    gpointer *pd = data;
+    AWORD *a = pd[0];
+    gboolean *b = pd[1];
+
+    char str[128],str_son[128];
+
+    // 如存在包含a的且频率(一样)的词则返回TRUE
+    if(*pfreq == a->freq && word->size > a->size)
+    {
+        strncpy(str, word->str, word->size);
+        strncpy(str_son, a->str, a->size);
+        if(strstr(str, str_son) != NULL)
+        {
+            printword(*word);
+            printaword(*a);
+            *b = TRUE;
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+gboolean is_son(AWORD *a)
+{
+    gboolean b = FALSE;
+    gpointer p[2] = {a, &b};
+    g_tree_foreach(word_tree, tidy_traverse, &p[0]);
+    return b;
+}
+static gint
 clean_traverse(gpointer key, gpointer value, gpointer data)
 {
     WORDORIGIN *word = key;
@@ -295,9 +323,12 @@ clean_traverse(gpointer key, gpointer value, gpointer data)
         }
         else
         {
-            //printword(*word);
-            //printaword(*a);
-            result_list = g_slist_append(result_list, a);
+            // 存在包含关系且频率(一样)的词只保留最长的
+            if(!is_son(a))
+            {
+                //printaword(*a);
+                result_list = g_slist_append(result_list, a);
+            }
         }
     }
     return FALSE;
