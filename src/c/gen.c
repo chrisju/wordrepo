@@ -68,8 +68,9 @@ int main(int argc, char ** argv)
 
     printf("find_all_word:%lldus\n",L1-L3);
 
-    // 清理树1 去除频率不足的词并生成待重搜的词链表
-    // 清理树2 过滤掉被包含的子词,生成结果链表
+    // TODO hashtab
+    // TODO 清理树1 去除频率不足的词并生成待重搜的词链表
+    // TODO 清理树2 过滤掉被包含的子词,生成结果链表
     //不保留长度最长的词,进行进一步处理
     printf("wordtree:%d\n",g_tree_nnodes(word_tree));
     g_tree_foreach(word_tree, clean_traverse, NULL);

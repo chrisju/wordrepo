@@ -92,7 +92,7 @@ void scan_dir(const char *directory, int deepth, FILE **fp_out)
                 all += len;
                 printf("len: %d\n", all);
                 // TODO for test
-                //if(all > 20 * 1024) break;
+                if(all > 20 * 1024) break;
             }
         }
     }

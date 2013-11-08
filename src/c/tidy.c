@@ -76,6 +76,7 @@ char *create_tidy_str(const char *fin_path, char **pbuf, int* plen)
     // 汉字或汉字之后EN_LENGHT个英文之内保留
     do
     {
+        // TODO is_chinese -> !is_ascii
         if(is_chinese(p))
         {
             write_chinese(&p, &p2);
@@ -85,6 +86,7 @@ char *create_tidy_str(const char *fin_path, char **pbuf, int* plen)
         {
             //printf("end:0x%x,p:0x%x\n",buf+len,p);
             // 非英文不保留,英文则保留有限位数
+            // TODO 判断英文不正确 会有一个英文多出来
             if(!is_english(p))
             {
                 start = buf;

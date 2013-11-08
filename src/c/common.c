@@ -36,7 +36,7 @@ char *get_real_path(const char *path, char *out, int size)
 int is_english(char* p)
 {
     char c = *p;
-    return (c > 64 && c < 91) || ( c > 96 && c < 123);
+    return (c > 64 && c < 91 ||  c > 96 && c < 123);
 }
 
 /**
